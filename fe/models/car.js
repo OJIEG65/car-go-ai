@@ -1,4 +1,5 @@
 import { Controls } from "./controls.js";
+import { Sensor } from "./sensor.js";
 
 export class Car {
   constructor(x, y, width, height) {
@@ -13,10 +14,16 @@ export class Car {
     this.friction = 0.05;
     this.angle = 0;
 
+    this.sensor = new Sensor(this);
     this.controls = new Controls();
   }
 
-  update() {
+  update(roadBorders) {
+    this.#move();
+    this.sensor.update(roadBorders);
+  }
+
+  #move() {
 
     // basic
     if (this.controls.forward) {
@@ -35,34 +42,32 @@ export class Car {
       this.speed = -this.maxSpeed / 2;
     }
 
-    if( this.speed > 0) { // friction physics to stop the car eventually
+    if (this.speed > 0) { // friction physics to stop the car eventually
       this.speed -= this.friction;
     }
 
-    if( this.speed < 0) { // friction physics to stop the car eventually from moving backwards
+    if (this.speed < 0) { // friction physics to stop the car eventually from moving backwards
       this.speed += this.friction;
     }
 
 
-    if(this.speed!==0) {
-        const flip = this.speed > 0 ? 1 : -1;
+    if (this.speed !== 0) {
+      const flip = this.speed > 0 ? 1 : -1;
 
       // left / right controls
-      if( this.controls.left) {
+      if (this.controls.left) {
         this.angle += 0.03 * flip;
       }
 
-      if(this.controls.right) {
+      if (this.controls.right) {
         this.angle -= 0.03 * flip;
       }
     }
 
 
-
-
     // math to push the car on coordinates to follow vector path
     this.x -= Math.sin(this.angle) * this.speed;
-    this.y -= Math.cosh(this.angle) * this.speed;
+    this.y -= Math.cos(this.angle) * this.speed;
   }
 
   draw(ctx) {
@@ -79,5 +84,7 @@ export class Car {
     );
     ctx.fill();
     ctx.restore();
+
+    this.sensor.draw(ctx);
   }
 }
