@@ -1,13 +1,23 @@
 export class Controls {
-  constructor() {
+  constructor(type) {
     this.forward = false;
     this.left = false;
     this.right = false;
     this.reverse = false;
 
-    this.#addKeyboardListeners();
+    switch (type) {
+      case "KEYS":
+        this.#addKeyboardListeners();
+        break;
+      case "DUMMY":
+        this.forward = true;
+        break;
+
+    }
   }
 
+  // BUG: assigning document.onkeydown overwrites any previous handler
+  // FIX: use document.addEventListener("keydown", ...) to support multiple car instances
   #addKeyboardListeners() {
     document.onkeydown = (event) => {
       switch (event.key) {

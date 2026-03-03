@@ -3,7 +3,7 @@ import { Sensor } from "./sensor.js";
 import { polysIntersect } from "../utils.js";
 
 export class Car {
-  constructor(x, y, width, height) {
+  constructor(x, y, width, height, controlType, maxSpeed = 3) {
     this.x = x;
     this.y = y;
     this.width = width;
@@ -11,28 +11,43 @@ export class Car {
 
     this.speed = 0;
     this.acceleration = 0.2;
-    this.maxSpeed = 3;
+    this.maxSpeed = maxSpeed;
     this.friction = 0.05;
     this.angle = 0;
     this.damaged = false;
 
-    this.sensor = new Sensor(this);
-    this.controls = new Controls();
+    if (controlType !== "DUMMY") {
+      this.sensor = new Sensor(this);
+    }
+
+    this.controls = new Controls(controlType);
   }
 
-  update(roadBorders) {
-    if(!this.damaged) {
+  // BUG: `traffic` is received but never passed to #assessDamage or sensor.update
+  // FIX: this.damaged = this.#assessDamage(roadBorders, traffic);
+  // FIX: this.sensor.update(roadBorders, traffic);
+  update(roadBorders, traffic) {
+    if (!this.damaged) {
       this.#move();
       this.polygon = this.#createPolygon();
-      this.damaged = this.#assessDamage(roadBorders);
+      this.damaged = this.#assessDamage(roadBorders, traffic);
     }
-    this.sensor.update(roadBorders);
-
+    if (this.sensor) {
+      this.sensor.update(roadBorders, traffic);
+    }
   }
 
-  #assessDamage(roadBorders) {
+  // BUG: only checks road borders, never checks traffic cars
+  // FIX: add `traffic` param, loop through traffic[i].polygon and check polysIntersect
+  #assessDamage(roadBorders, traffic) {
     for (let i = 0; i < roadBorders.length; i++) {
       if (polysIntersect(this.polygon, roadBorders[i])) {
+        return true;
+      }
+    }
+
+    for (let i = 0; i < traffic.length; i++) {
+      if (polysIntersect(this.polygon, traffic[i].polygon)) {
         return true;
       }
     }
@@ -85,6 +100,8 @@ export class Car {
       this.speed = -this.maxSpeed / 2;
     }
 
+    // BUG: when |speed| < friction, speed oscillates around 0 and never stops
+    // FIX: add before these blocks: if (Math.abs(this.speed) < this.friction) { this.speed = 0; }
     if (this.speed > 0) { // friction physics to stop the car eventually
       this.speed -= this.friction;
     }
@@ -113,11 +130,11 @@ export class Car {
     this.y -= Math.cos(this.angle) * this.speed;
   }
 
-  draw(ctx) {
+  draw(ctx, color) {
     if (this.damaged) {
       ctx.fillStyle = "grey";
     } else {
-      ctx.fillStyle = "black";
+      ctx.fillStyle = color;
     }
 
     ctx.beginPath();
@@ -126,6 +143,10 @@ export class Car {
       ctx.lineTo(this.polygon[i].x, this.polygon[i].y);
     }
     ctx.fill();
-    this.sensor.draw(ctx);
+
+    if (this.sensor) {
+      this.sensor.draw(ctx);
+    }
+
   }
 }

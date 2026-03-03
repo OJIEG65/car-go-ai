@@ -10,6 +10,9 @@ export class Road {
     this.left = x - narrowedWidth / 2;
     this.right = x + narrowedWidth / 2;
 
+    // BUG: top/bottom are semantically inverted for canvas coords (Y grows downward)
+    // top should be negative (up on screen), bottom should be positive (down on screen)
+    // works visually by accident but will cause confusion in future logic
     const infinity = 1000000;
 
     this.top = infinity;
