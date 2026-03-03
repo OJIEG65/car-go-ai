@@ -1,11 +1,12 @@
 import { Car } from "./models/car.js";
 import { Road } from "./models/road.js";
+import { Visualizer } from "./models/visualizer.js";
 
 const carCanvas = document.getElementById("carCanvas");
 const networkCanvas = document.getElementById("networkCanvas");
 
 carCanvas.width = 200;
-networkCanvas.width = 300;
+networkCanvas.width = 500;
 
 
 const carCtx = carCanvas.getContext("2d");
@@ -42,5 +43,7 @@ function animate() {
   car.draw(carCtx, 'blue');
 
   carCtx.restore();
+
+  Visualizer.drawNetwork(networkCanvasCtx, car.brain)
   requestAnimationFrame(animate);
 }
