@@ -1,13 +1,17 @@
 import { Car } from "./models/car.js";
 import { Road } from "./models/road.js";
 
-const canvas = document.getElementById("canvas");
+const carCanvas = document.getElementById("carCanvas");
+const networkCanvas = document.getElementById("networkCanvas");
 
-canvas.width = 200;
-canvas.height = window.innerHeight;
-const ctx = canvas.getContext("2d");
+carCanvas.width = 200;
+networkCanvas.width = 300;
 
-const road = new Road(canvas.width / 2, canvas.width, 3);
+
+const carCtx = carCanvas.getContext("2d");
+const networkCanvasCtx = networkCanvas.getContext("2d");
+
+const road = new Road(carCanvas.width / 2, carCanvas.width, 3);
 const car = new Car(road.getLaneCenter(1), 100, 30, 50, "AI");
 
 const traffic = [
@@ -22,20 +26,21 @@ function animate() {
     traffic[i].update(road.borders, []);
   }
 
-  // PERF: setting canvas.height every frame forces full buffer reallocation
+  // PERF: setting carCanvas.height every frame forces full buffer reallocation
   // FIX: move to a window resize event listener instead
-  canvas.height = window.innerHeight;
+  carCanvas.height = window.innerHeight;
+  networkCanvas.height = window.innerHeight;
   car.update(road.borders, traffic);
 
-  ctx.save();
-  ctx.translate(0, -car.y + canvas.height * 0.7);
+  carCtx.save();
+  carCtx.translate(0, -car.y + carCanvas.height * 0.7);
 
-  road.draw(ctx);
+  road.draw(carCtx);
   for (let i = 0; i < traffic.length; i++) {
-    traffic[i].draw(ctx, 'red');
+    traffic[i].draw(carCtx, 'red');
   }
-  car.draw(ctx, 'blue');
+  car.draw(carCtx, 'blue');
 
-  ctx.restore();
+  carCtx.restore();
   requestAnimationFrame(animate);
 }
