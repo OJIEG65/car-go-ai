@@ -1,69 +1,116 @@
-import { Car } from "./models/car.js";
-import { Road } from "./models/road.js";
-import { Visualizer } from "./models/visualizer.js";
+import { WSClient } from './ws-client.js';
+import { Renderer } from './renderer.js';
 
-const carCanvas = document.getElementById("carCanvas");
-const networkCanvas = document.getElementById("networkCanvas");
-
+const carCanvas = document.getElementById('carCanvas');
+const networkCanvas = document.getElementById('networkCanvas');
 carCanvas.width = 200;
 networkCanvas.width = 500;
 
+const renderer = new Renderer(carCanvas, networkCanvas);
 
-const carCtx = carCanvas.getContext("2d");
-const networkCanvasCtx = networkCanvas.getContext("2d");
+// State from server
+let road = null;
+let worldState = null;
+let brain = null;
+let paused = false;
 
-const road = new Road(carCanvas.width / 2, carCanvas.width, 3);
-const N = 10;
+// Status elements
+const statusEl = document.getElementById('status');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+const saveBrainBtn = document.getElementById('saveBrainBtn');
+const loadBrainBtn = document.getElementById('loadBrainBtn');
 
-const cars = generateCars(N);
+// Determine WebSocket URL from current page location
+const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${wsProtocol}//${location.host}/ws`;
 
-const traffic = [
-  new Car(road.getLaneCenter(1), -100, 30, 50, 'DUMMY', 2),
-];
+const client = new WSClient(wsUrl, {
+  onConnect: () => {
+    if (statusEl) statusEl.textContent = 'Connected';
+    if (statusEl) statusEl.style.color = '#4f4';
+  },
 
+  onDisconnect: () => {
+    if (statusEl) statusEl.textContent = 'Disconnected — reconnecting...';
+    if (statusEl) statusEl.style.color = '#f44';
+  },
 
-animate();
+  init: (payload) => {
+    road = payload.road;
+    // Fetch the best brain once connected
+    fetchBrain();
+  },
 
-function generateCars(N) {
-  const cars = [];
-  for (let i = 1; i <= N; i++) {
-    cars.push(new Car(road.getLaneCenter(1), 100, 30, 50, "AI"));
+  state: (payload) => {
+    worldState = payload;
+  },
+
+  generation_end: (payload) => {
+    console.log(`Generation ${payload.generation} ended — best fitness: ${payload.bestFitness.toFixed(1)}`);
+    // Refresh brain for network visualizer
+    fetchBrain();
+  },
+
+  brain: (payload) => {
+    brain = payload.data;
+  },
+
+  error: (payload) => {
+    console.error('Server error:', payload.code, payload.message);
+  },
+});
+
+// Fetch brain via REST for network visualization
+async function fetchBrain() {
+  try {
+    const resp = await fetch('/api/brain/best');
+    if (resp.ok) {
+      brain = await resp.json();
+    }
+  } catch (e) {
+    // Will retry on next generation
   }
-  return cars;
 }
 
+// Periodically refresh brain for live visualization
+setInterval(fetchBrain, 2000);
+
+// Render loop
 function animate() {
-  for (let i = 0; i < traffic.length; i++) {
-    traffic[i].update(road.borders, []);
-  }
-
-  // PERF: setting carCanvas.height every frame forces full buffer reallocation
-  // FIX: move to a window resize event listener instead
-  carCanvas.height = window.innerHeight;
-  networkCanvas.height = window.innerHeight;
-  for (let i = 0; i < cars.length; i++) {
-    cars[i].update(road.borders, traffic);
-  }
-
-  const bestCar = cars.find(car => car.y === Math.min(...cars.map(c => c.y)));
-
-  carCtx.save();
-  carCtx.translate(0, -bestCar.y + carCanvas.height * 0.7);
-
-  road.draw(carCtx);
-  for (let i = 0; i < traffic.length; i++) {
-    traffic[i].draw(carCtx, 'red');
-  }
-
-  carCtx.globalAlpha = 0.2;
-  for (let i = 0; i < cars.length; i++) {
-    cars[i].draw(carCtx, 'blue');
-  }
-  carCtx.globalAlpha = 1;
-  bestCar.draw(carCtx, 'blue', { drawSensor: true });
-
-  carCtx.restore();
-
-  Visualizer.drawNetwork(networkCanvasCtx, bestCar.brain);
+  renderer.drawFrame(worldState, road, brain);
   requestAnimationFrame(animate);
+}
+animate();
+
+// Controls
+if (pauseBtn) {
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    if (paused) {
+      client.pause();
+      pauseBtn.textContent = 'Resume';
+    } else {
+      client.resume();
+      pauseBtn.textContent = 'Pause';
+    }
+  });
+}
+
+if (resetBtn) {
+  resetBtn.addEventListener('click', () => {
+    client.reset();
+  });
+}
+
+if (saveBrainBtn) {
+  saveBrainBtn.addEventListener('click', () => {
+    client.saveBrain('best');
+  });
+}
+
+if (loadBrainBtn) {
+  loadBrainBtn.addEventListener('click', () => {
+    client.loadBrain('best');
+  });
 }

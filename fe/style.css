@@ -6,10 +6,51 @@ body {
 }
 
 #carCanvas {
+    margin-top: 40px;
     background: lightgray;
 }
 
-
 #networkCanvas {
+    margin-top: 40px;
     background: black;
+}
+
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+#status {
+    color: #f44;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+#controls {
+    display: flex;
+    gap: 8px;
+}
+
+#controls button {
+    padding: 4px 12px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 4px;
+}
+
+#controls button:hover {
+    background: #555;
 }
