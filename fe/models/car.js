@@ -21,7 +21,7 @@ export class Car {
 
     if (controlType !== "DUMMY") {
       this.sensor = new Sensor(this);
-      this.brain = new NeuralNetwork([this.sensor.rayCount, 6, 4]);
+      this.brain = new NeuralNetwork([this.sensor.rayCount, 6,6, 4]);
     }
 
     this.controls = new Controls(controlType);
@@ -137,7 +137,9 @@ export class Car {
     this.y -= Math.cos(this.angle) * this.speed;
   }
 
-  draw(ctx, color) {
+  draw(ctx, color, options = {}) {
+    const { drawSensor = false } = options;
+
     if (this.damaged) {
       ctx.fillStyle = "grey";
     } else {
@@ -151,7 +153,7 @@ export class Car {
     }
     ctx.fill();
 
-    if (this.sensor) {
+    if (this.sensor && drawSensor) {
       this.sensor.draw(ctx);
     }
 
